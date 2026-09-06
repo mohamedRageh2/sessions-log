@@ -248,15 +248,13 @@
     <h1 id="login-title">تسجيل الدخول</h1>
     <div class="field">
       <label>البريد الإلكتروني</label>
-      <input type="email" id="email-input" placeholder="example@email.com" autocomplete="username">
+      <input type="email" id="email-input" value="esraarageh976@gmail.com" placeholder="esraarageh976@gmail.com" autocomplete="username">
     </div>
     <div class="field">
       <label>كلمة المرور</label>
       <input type="password" id="password-input" placeholder="اكتبي كلمة المرور" autocomplete="current-password">
     </div>
     <button class="btn btn-primary" id="login-btn">دخول</button>
-    <button class="btn btn-outline" id="signup-btn">إنشاء حساب جديد (أول مرة فقط)</button>
-    <button class="toggle-mode" id="forgot-pw-btn">نسيت كلمة المرور؟</button>
     <div id="login-error"></div>
     <div id="login-info"></div>
   </div>
@@ -270,15 +268,15 @@
           <button class="icon-btn" id="report-btn" title="التقرير الشهري">📊</button>
           <button class="icon-btn" id="theme-toggle-main" title="الوضع الليلي/النهاري">🌙</button>
           <button class="icon-btn" id="export-btn" title="تصدير نسخة احتياطية CSV">⬇️</button>
-          <button class="btn-logout" id="lock-btn" title="تسجيل الخروج">🚪 تسجيل الخروج</button>
+          <button class="icon-btn" id="lock-btn" title="تسجيل الخروج">🚪</button>
         </div>
       </div>
       <div id="user-info-bar" style="display:flex; align-items:center; justify-content:space-between; font-size:12.5px; color:#5b6459; padding-top:4px; margin-bottom:4px; border-top:1px dashed var(--border);">
         <span>الحساب المسجل: <strong id="logged-in-user-email" style="color:var(--deep); font-weight:600;">—</strong></span>
       </div>
       <div id="list-header-controls" style="display:none;">
-        <div class="list-back-row">
-          <button id="back-to-folders-btn">→ رجوع للأقسام</button>
+        <div class="list-back-row" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+          <button id="back-to-folders-btn" class="icon-btn" title="رجوع للأقسام" style="background:var(--sage-light); border-radius:10px; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; font-size:18px; color:var(--deep-2);">→</button>
         </div>
         <div class="search-wrap">
           <input type="text" id="search-input" placeholder="ابحثي بالاسم أو التليفون أو سبب المتابعة...">
@@ -401,6 +399,7 @@
   document.getElementById('theme-toggle-main').addEventListener('click', toggleTheme);
 
   // ---------- State ----------
+  const ALLOWED_EMAIL = 'esraarageh976@gmail.com';
   let currentUser = null;
   let patients = [];
   let sessionsCache = {};
@@ -414,22 +413,24 @@
   const emailInput = document.getElementById('email-input');
   const pwInput = document.getElementById('password-input');
   const loginBtn = document.getElementById('login-btn');
-  const signupBtn = document.getElementById('signup-btn');
   const loginError = document.getElementById('login-error');
   const loginInfo = document.getElementById('login-info');
 
   function setLoginBusy(busy, label){
-    loginBtn.disabled = busy;
-    signupBtn.disabled = busy;
+    if(loginBtn) loginBtn.disabled = busy;
     if(busy) loginInfo.textContent = label || 'جاري التنفيذ...';
     else loginInfo.textContent = '';
   }
 
   loginBtn.addEventListener('click', async () => {
     loginError.textContent = '';
-    const email = emailInput.value.trim();
+    const email = emailInput.value.trim().toLowerCase();
     const pw = pwInput.value;
     if(!email || !pw){ loginError.textContent = 'اكتبي البريد وكلمة المرور.'; return; }
+    if(email !== ALLOWED_EMAIL){
+      loginError.textContent = `عفواً، الموقع مخصص فقط للبريد المصرح له (${ALLOWED_EMAIL}).`;
+      return;
+    }
     setLoginBusy(true, 'جاري تسجيل الدخول...');
     try{
       await signInWithEmailAndPassword(auth, email, pw);
@@ -437,36 +438,6 @@
       loginError.textContent = friendlyAuthError(e.code);
     }
     setLoginBusy(false);
-  });
-
-  signupBtn.addEventListener('click', async () => {
-    loginError.textContent = '';
-    const email = emailInput.value.trim();
-    const pw = pwInput.value;
-    if(!email || !pw){ loginError.textContent = 'اكتبي البريد وكلمة المرور.'; return; }
-    if(pw.length < 6){ loginError.textContent = 'كلمة المرور لازم تكون 6 حروف/أرقام على الأقل.'; return; }
-    setLoginBusy(true, 'جاري إنشاء الحساب...');
-    try{
-      await createUserWithEmailAndPassword(auth, email, pw);
-    }catch(e){
-      loginError.textContent = friendlyAuthError(e.code);
-    }
-    setLoginBusy(false);
-  });
-
-  document.getElementById('forgot-pw-btn').addEventListener('click', async () => {
-    loginError.textContent = '';
-    const email = emailInput.value.trim();
-    if(!email){ loginError.textContent = 'اكتبي بريدك الإلكتروني الأول عشان نبعتلك رابط الاسترجاع.'; return; }
-    setLoginBusy(true, 'جاري إرسال رابط الاسترجاع...');
-    try{
-      await sendPasswordResetEmail(auth, email);
-      loginInfo.textContent = 'تم إرسال رابط استرجاع كلمة المرور على بريدك. افتحيه من نفس الجهاز.';
-    }catch(e){
-      loginError.textContent = friendlyAuthError(e.code);
-      loginInfo.textContent = '';
-    }
-    loginBtn.disabled = false; signupBtn.disabled = false;
   });
 
   document.getElementById('lock-btn').addEventListener('click', async () => {
@@ -484,9 +455,24 @@
 
   onAuthStateChanged(auth, async (user) => {
     if(user){
+      const loggedEmail = (user.email || '').toLowerCase().trim();
+
+      // Enforce strict single user restriction
+      if(loggedEmail !== ALLOWED_EMAIL){
+        await signOut(auth);
+        currentUser = null;
+        mainApp.style.display = 'none';
+        loginScreen.style.display = 'flex';
+        emailInput.value = ALLOWED_EMAIL;
+        pwInput.value = '';
+        loginError.textContent = `عفواً، الموقع مخصص فقط للبريد المصرح له (${ALLOWED_EMAIL}).`;
+        loginInfo.textContent = '';
+        return;
+      }
+
       currentUser = user;
       const emailEl = document.getElementById('logged-in-user-email');
-      if(emailEl) emailEl.textContent = user.email || 'مستخدم مسجّل';
+      if(emailEl) emailEl.textContent = user.email || ALLOWED_EMAIL;
       loginScreen.style.display = 'none';
       mainApp.style.display = 'flex';
       patients = []; sessionsCache = {}; tasksCache = {};
@@ -498,7 +484,7 @@
       mainApp.style.display = 'none';
       loginScreen.style.display = 'flex';
       pwInput.value = '';
-      emailInput.value = '';
+      emailInput.value = ALLOWED_EMAIL;
       loginError.textContent = '';
       loginInfo.textContent = '';
     }
@@ -771,7 +757,15 @@
         <div id="report-body"><div class="loading">جاري الحساب...</div></div>
       </div>
     `;
-    document.getElementById('back-from-report').addEventListener('click', () => { reportScreen.style.display = 'none'; });
+    document.getElementById('back-from-report').addEventListener('click', () => {
+      reportScreen.style.display = 'none';
+      document.getElementById('patient-list').style.display = 'none';
+      listHeaderControls.style.display = 'none';
+      if(addPatientFab) addPatientFab.style.display = 'none';
+      folderView.style.display = 'block';
+      mainHeaderTitle.textContent = 'سجل الجلسات النفسية';
+      renderFolderView();
+    });
     document.getElementById('report-month').addEventListener('change', (e) => {
       computeAndRenderReport(e.target.value);
     });
