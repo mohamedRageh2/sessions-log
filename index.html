@@ -85,6 +85,14 @@
   .btn-outline{background:transparent; color:var(--deep); border:1.5px solid var(--deep); width:100%; margin-top:10px;}
   .btn-danger{background:transparent; color:var(--rose); border:1.5px solid var(--rose);}
   .btn-ghost{background:transparent; color:#5b6459;}
+  .btn-logout{
+    display:inline-flex; align-items:center; gap:5px;
+    background:var(--rose); color:#ffffff; border:none; border-radius:8px;
+    padding:6px 12px; font-size:13px; font-weight:600; cursor:pointer;
+    font-family:inherit; transition:opacity .15s, transform .05s;
+  }
+  .btn-logout:hover{ opacity:.9; }
+  .btn-logout:active{ transform:scale(.97); }
   #login-error{color:var(--rose); font-size:13px; min-height:18px; margin-top:4px;}
   #login-info{color:var(--deep); font-size:13px; min-height:18px; margin-top:4px;}
   .hint-note{
@@ -238,7 +246,6 @@
     <button class="icon-btn" id="theme-toggle-login" style="position:absolute; top:16px; left:16px; font-size:22px;">🌙</button>
     <div class="login-mark">ن</div>
     <h1 id="login-title">تسجيل الدخول</h1>
-    <p class="sub">سجل الجلسات النفسية محفوظ على حسابك، ويفتح من أي جهاز بعد تسجيل الدخول.</p>
     <div class="field">
       <label>البريد الإلكتروني</label>
       <input type="email" id="email-input" placeholder="example@email.com" autocomplete="username">
@@ -252,7 +259,6 @@
     <button class="toggle-mode" id="forgot-pw-btn">نسيت كلمة المرور؟</button>
     <div id="login-error"></div>
     <div id="login-info"></div>
-    <p class="hint-note">تنبيه: البيانات بتتخزن على سحابة Firebase مرتبطة بحسابك بس. حافظي على كلمة مرور قوية وميتفتحش حسابك من جهاز حد تاني.</p>
   </div>
 
   <!-- MAIN APP (hidden until login) -->
@@ -260,12 +266,15 @@
     <header>
       <div class="top-row">
         <h1 id="main-header-title">سجل الجلسات النفسية</h1>
-        <div style="display:flex; gap:4px;">
+        <div style="display:flex; align-items:center; gap:6px;">
           <button class="icon-btn" id="report-btn" title="التقرير الشهري">📊</button>
           <button class="icon-btn" id="theme-toggle-main" title="الوضع الليلي/النهاري">🌙</button>
           <button class="icon-btn" id="export-btn" title="تصدير نسخة احتياطية CSV">⬇️</button>
-          <button class="icon-btn" id="lock-btn" title="تسجيل الخروج">⏻</button>
+          <button class="btn-logout" id="lock-btn" title="تسجيل الخروج">🚪 تسجيل الخروج</button>
         </div>
+      </div>
+      <div id="user-info-bar" style="display:flex; align-items:center; justify-content:space-between; font-size:12.5px; color:#5b6459; padding-top:4px; margin-bottom:4px; border-top:1px dashed var(--border);">
+        <span>الحساب المسجل: <strong id="logged-in-user-email" style="color:var(--deep); font-weight:600;">—</strong></span>
       </div>
       <div id="list-header-controls" style="display:none;">
         <div class="list-back-row">
@@ -461,12 +470,23 @@
   });
 
   document.getElementById('lock-btn').addEventListener('click', async () => {
-    await signOut(auth);
+    if(confirm('هل تريد تسجيل الخروج من هذا الحساب لدخول حساب جديد؟')){
+      try{
+        await signOut(auth);
+        emailInput.value = '';
+        pwInput.value = '';
+      }catch(err){
+        console.error('Signout error:', err);
+        alert('حصل خطأ في تسجيل الخروج، حاولي تاني.');
+      }
+    }
   });
 
   onAuthStateChanged(auth, async (user) => {
     if(user){
       currentUser = user;
+      const emailEl = document.getElementById('logged-in-user-email');
+      if(emailEl) emailEl.textContent = user.email || 'مستخدم مسجّل';
       loginScreen.style.display = 'none';
       mainApp.style.display = 'flex';
       patients = []; sessionsCache = {}; tasksCache = {};
@@ -478,7 +498,9 @@
       mainApp.style.display = 'none';
       loginScreen.style.display = 'flex';
       pwInput.value = '';
-      emailInput.value = emailInput.value; // keep email for convenience
+      emailInput.value = '';
+      loginError.textContent = '';
+      loginInfo.textContent = '';
     }
   });
 
