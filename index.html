@@ -154,7 +154,7 @@
   .fab-inner{max-width:520px; margin:0 auto; padding:0 16px;}
 
   /* ---------- Detail / forms screens ---------- */
-  .screen{position:absolute; inset:0; background:var(--cream); display:flex; flex-direction:column; overflow-y:auto;}
+  .screen{position:absolute; inset:0; background:var(--cream); display:flex; flex-direction:column; overflow-y:auto; z-index:20;}
   .screen-header{
     position:sticky; top:0; background:var(--cream); padding:16px 16px 10px;
     display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border); z-index:2;
@@ -251,7 +251,7 @@
     <h1 id="login-title">تسجيل الدخول</h1>
     <div class="field">
       <label>البريد الإلكتروني</label>
-      <input type="email" id="email-input" value="esraarageh976@gmail.com" placeholder="esraarageh976@gmail.com" autocomplete="username">
+      <input type="email" id="email-input" placeholder="example@email.com" autocomplete="username">
     </div>
     <div class="field">
       <label>كلمة المرور</label>
@@ -528,7 +528,7 @@
     const pw = pwInput.value;
     if(!email || !pw){ loginError.textContent = 'اكتبي البريد وكلمة المرور.'; return; }
     if(email !== ALLOWED_EMAIL){
-      loginError.textContent = `عفواً، الموقع مخصص فقط للبريد المصرح له (${ALLOWED_EMAIL}).`;
+      loginError.textContent = friendlyAuthError('auth/invalid-credential');
       return;
     }
     setLoginBusy(true, 'جاري تسجيل الدخول...');
@@ -588,9 +588,9 @@
         currentUser = null;
         mainApp.style.display = 'none';
         loginScreen.style.display = 'flex';
-        emailInput.value = ALLOWED_EMAIL;
+        emailInput.value = '';
         pwInput.value = '';
-        loginError.textContent = `عفواً، الموقع مخصص فقط للبريد المصرح له (${ALLOWED_EMAIL}).`;
+        loginError.textContent = friendlyAuthError('auth/invalid-credential');
         loginInfo.textContent = '';
         return;
       }
@@ -873,8 +873,8 @@
     reportScreen.style.display = 'flex';
     reportScreen.innerHTML = `
       <div class="screen-header">
-        <button class="icon-btn" id="back-from-report" title="إغلاق والرجوع للأقسام" style="font-size:20px;">→</button>
-        <h2>التقرير الشهري</h2>
+        <button class="icon-btn" id="back-from-report" title="رجوع" style="background:var(--sage-light); border-radius:10px; width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; font-size:18px; color:var(--deep-2);">→</button>
+        <h2>${t('monthlyReport')}</h2>
       </div>
       <div class="screen-body">
         <div class="field"><label>اختاري الشهر</label><input type="month" id="report-month" value="${monthValue}"></div>
@@ -883,12 +883,6 @@
     `;
     document.getElementById('back-from-report').addEventListener('click', () => {
       reportScreen.style.display = 'none';
-      document.getElementById('patient-list').style.display = 'none';
-      listHeaderControls.style.display = 'none';
-      if(addPatientFab) addPatientFab.style.display = 'none';
-      folderView.style.display = 'block';
-      mainHeaderTitle.textContent = 'سجل الجلسات النفسية';
-      renderFolderView();
     });
     document.getElementById('report-month').addEventListener('change', (e) => {
       computeAndRenderReport(e.target.value);
