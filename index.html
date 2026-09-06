@@ -401,6 +401,15 @@
   document.getElementById('theme-toggle-login').addEventListener('click', toggleTheme);
   document.getElementById('theme-toggle-main').addEventListener('click', toggleTheme);
 
+  // ---------- State ----------
+  const ALLOWED_EMAIL = 'esraarageh976@gmail.com';
+  let currentUser = null;
+  let patients = [];
+  let sessionsCache = {};
+  let tasksCache = {};
+  let assessmentsCache = {};
+  let currentBranchFilter = 'الكل';
+
   // ---------- Language (ar/en mode) ----------
   const LANG_KEY = 'clinic_records_lang';
   let currentLang = 'ar';
@@ -484,10 +493,10 @@
     const folderTitleEl = document.querySelector('#folder-view h2');
     if(folderTitleEl) folderTitleEl.textContent = t('selectSection');
 
-    if(currentUser){
-      renderFolderView();
-      if(document.getElementById('patient-list').style.display !== 'none'){
-        renderPatientList();
+    if(typeof currentUser !== 'undefined' && currentUser){
+      if(typeof renderFolderView === 'function') renderFolderView();
+      if(document.getElementById('patient-list') && document.getElementById('patient-list').style.display !== 'none'){
+        if(typeof renderPatientList === 'function') renderPatientList();
       }
     }
   }
@@ -497,19 +506,6 @@
     try{ window.localStorage.setItem(LANG_KEY, next); }catch(e){}
     applyLanguage(next);
   }
-
-  applyLanguage(currentLang);
-  document.getElementById('lang-toggle-login').addEventListener('click', toggleLanguage);
-  document.getElementById('lang-toggle-main').addEventListener('click', toggleLanguage);
-
-  // ---------- State ----------
-  const ALLOWED_EMAIL = 'esraarageh976@gmail.com';
-  let currentUser = null;
-  let patients = [];
-  let sessionsCache = {};
-  let tasksCache = {};
-  let assessmentsCache = {};
-  let currentBranchFilter = 'الكل';
 
   // ---------- Login flow ----------
   const loginScreen = document.getElementById('login-screen');
@@ -562,6 +558,12 @@
   emailInput.addEventListener('keyup', (e) => {
     if(e.key === 'Enter') performLogin();
   });
+
+  applyLanguage(currentLang);
+  const l1El = document.getElementById('lang-toggle-login');
+  if(l1El) l1El.addEventListener('click', toggleLanguage);
+  const l2El = document.getElementById('lang-toggle-main');
+  if(l2El) l2El.addEventListener('click', toggleLanguage);
 
   document.getElementById('lock-btn').addEventListener('click', async () => {
     if(confirm('هل تريد تسجيل الخروج من هذا الحساب لدخول حساب جديد؟')){
