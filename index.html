@@ -366,16 +366,16 @@
 
   function friendlyAuthError(code){
     const map = {
-      'auth/invalid-email': 'صيغة البريد الإلكتروني مش صحيحة.',
-      'auth/user-not-found': 'مفيش حساب بالبريد ده. اعملي حساب جديد الأول.',
-      'auth/wrong-password': 'كلمة المرور غلط.',
-      'auth/invalid-credential': 'البريد أو كلمة المرور غلط.',
-      'auth/email-already-in-use': 'فيه حساب بالفعل بالبريد ده، دخلي بدل ما تعملي حساب جديد.',
-      'auth/weak-password': 'كلمة المرور لازم تكون 6 حروف/أرقام على الأقل.',
-      'auth/too-many-requests': 'محاولات كتير غلط. استنّي شوية وحاولي تاني.',
-      'auth/network-request-failed': 'مفيش اتصال بالإنترنت، تأكدي من الشبكة وحاولي تاني.'
+      'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
+      'auth/user-not-found': 'كلمة المرور غير صحيحة أو الحساب غير موجود.',
+      'auth/wrong-password': 'كلمة المرور غير صحيحة.',
+      'auth/invalid-credential': 'كلمة المرور غير صحيحة.',
+      'auth/email-already-in-use': 'هذا البريد مسجل بالفعل، أدخلي كلمة المرور الصحيحة.',
+      'auth/weak-password': 'كلمة المرور يجب أن تكون 6 أرقام/حروف على الأقل.',
+      'auth/too-many-requests': 'محاولات كثيرة خاطئة، يرجى الانتظار قليلاً والمحاولة مجدداً.',
+      'auth/network-request-failed': 'تأكدي من الاتصال بالإنترنت وحاولي مرة أخرى.'
     };
-    return map[code] || 'حصل خطأ غير متوقع، حاولي تاني.';
+    return map[code] || ('حصل خطأ: ' + (code || 'حاولي تاني'));
   }
 
   // ---------- Theme (dark/light mode) ----------
@@ -526,7 +526,7 @@
     else loginInfo.textContent = '';
   }
 
-  loginBtn.addEventListener('click', async () => {
+  async function performLogin(){
     loginError.textContent = '';
     const email = emailInput.value.trim().toLowerCase();
     const pw = pwInput.value;
@@ -539,9 +539,28 @@
     try{
       await signInWithEmailAndPassword(auth, email, pw);
     }catch(e){
-      loginError.textContent = friendlyAuthError(e.code);
+      console.error('Sign in error:', e);
+      // Auto-create account for allowed email on first time if user not found or invalid credential
+      if(e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential'){
+        try{
+          await createUserWithEmailAndPassword(auth, email, pw);
+        }catch(createErr){
+          console.error('Create user error:', createErr);
+          loginError.textContent = friendlyAuthError(createErr.code || e.code);
+        }
+      } else {
+        loginError.textContent = friendlyAuthError(e.code);
+      }
     }
     setLoginBusy(false);
+  }
+
+  loginBtn.addEventListener('click', performLogin);
+  pwInput.addEventListener('keyup', (e) => {
+    if(e.key === 'Enter') performLogin();
+  });
+  emailInput.addEventListener('keyup', (e) => {
+    if(e.key === 'Enter') performLogin();
   });
 
   document.getElementById('lock-btn').addEventListener('click', async () => {
