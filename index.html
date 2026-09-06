@@ -243,7 +243,10 @@
 
   <!-- LOGIN SCREEN -->
   <div id="login-screen">
-    <button class="icon-btn" id="theme-toggle-login" style="position:absolute; top:16px; left:16px; font-size:22px;">🌙</button>
+    <div style="position:absolute; top:16px; left:16px; display:flex; gap:6px; align-items:center;">
+      <button class="icon-btn" id="theme-toggle-login" style="font-size:22px;">🌙</button>
+      <button class="icon-btn" id="lang-toggle-login" title="تبديل اللغة / Switch Language" style="font-size:12px; font-weight:700; background:var(--sage-light); border-radius:8px; padding:4px 8px; color:var(--deep);">EN</button>
+    </div>
     <div class="login-mark">ن</div>
     <h1 id="login-title">تسجيل الدخول</h1>
     <div class="field">
@@ -265,6 +268,7 @@
       <div class="top-row">
         <h1 id="main-header-title">سجل الجلسات النفسية</h1>
         <div style="display:flex; align-items:center; gap:6px;">
+          <button class="icon-btn" id="lang-toggle-main" title="تبديل اللغة / Switch Language" style="font-size:12px; font-weight:700; background:var(--sage-light); border-radius:8px; padding:4px 8px; color:var(--deep);">EN</button>
           <button class="icon-btn" id="report-btn" title="التقرير الشهري">📊</button>
           <button class="icon-btn" id="theme-toggle-main" title="الوضع الليلي/النهاري">🌙</button>
           <button class="icon-btn" id="export-btn" title="تصدير نسخة احتياطية CSV">⬇️</button>
@@ -287,7 +291,6 @@
 
     <div id="folder-view">
       <h2>اختاري القسم</h2>
-      <p class="sub">كل قسم بيعرض حالاته بس</p>
       <div id="folder-cards"></div>
     </div>
 
@@ -397,6 +400,107 @@
   applyTheme(getSavedTheme());
   document.getElementById('theme-toggle-login').addEventListener('click', toggleTheme);
   document.getElementById('theme-toggle-main').addEventListener('click', toggleTheme);
+
+  // ---------- Language (ar/en mode) ----------
+  const LANG_KEY = 'clinic_records_lang';
+  let currentLang = 'ar';
+  try{ currentLang = window.localStorage.getItem(LANG_KEY) || 'ar'; }catch(e){}
+
+  const i18n = {
+    ar: {
+      appTitle: 'سجل الجلسات النفسية',
+      loginTitle: 'تسجيل الدخول',
+      emailLabel: 'البريد الإلكتروني',
+      passwordLabel: 'كلمة المرور',
+      pwPlaceholder: 'اكتبي كلمة المرور',
+      loginBtn: 'دخول',
+      selectSection: 'اختاري القسم',
+      allPatients: 'كل الحالات',
+      addSection: 'إضافة قسم جديد',
+      newSectionName: 'اسم القسم الجديد',
+      addBtn: 'إضافة',
+      cancelBtn: 'إلغاء',
+      addPatientBtn: '+ إضافة حالة جديدة',
+      monthlyReport: 'التقرير الشهري',
+      logout: 'تسجيل الخروج',
+      confirmLogout: 'هل تريد تسجيل الخروج من هذا الحساب لدخول حساب جديد؟',
+      searchPlaceholder: 'ابحثي بالاسم أو التليفون أو سبب المتابعة...',
+      loggedUser: 'الحساب المسجل:',
+      unauthorizedEmail: 'عفواً، الموقع مخصص فقط للبريد المصرح له (esraarageh976@gmail.com).'
+    },
+    en: {
+      appTitle: 'Psychological Sessions Log',
+      loginTitle: 'Sign In',
+      emailLabel: 'Email Address',
+      passwordLabel: 'Password',
+      pwPlaceholder: 'Enter password',
+      loginBtn: 'Sign In',
+      selectSection: 'Select Section',
+      allPatients: 'All Patients',
+      addSection: 'Add New Section',
+      newSectionName: 'New Section Name',
+      addBtn: 'Add',
+      cancelBtn: 'Cancel',
+      addPatientBtn: '+ Add New Patient',
+      monthlyReport: 'Monthly Report',
+      logout: 'Sign Out',
+      confirmLogout: 'Are you sure you want to sign out?',
+      searchPlaceholder: 'Search by name, phone, or reason...',
+      loggedUser: 'Logged In User:',
+      unauthorizedEmail: 'Sorry, access is restricted to the authorized email (esraarageh976@gmail.com).'
+    }
+  };
+
+  function t(key){
+    return (i18n[currentLang] && i18n[currentLang][key]) || (i18n.ar && i18n.ar[key]) || key;
+  }
+
+  function applyLanguage(lang){
+    currentLang = lang;
+    document.documentElement.setAttribute('lang', lang);
+    document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+    const btnLabel = lang === 'ar' ? 'EN' : 'عربي';
+    const l1 = document.getElementById('lang-toggle-login');
+    const l2 = document.getElementById('lang-toggle-main');
+    if(l1) l1.textContent = btnLabel;
+    if(l2) l2.textContent = btnLabel;
+
+    const loginTitleEl = document.getElementById('login-title');
+    if(loginTitleEl) loginTitleEl.textContent = t('loginTitle');
+    const loginBtnEl = document.getElementById('login-btn');
+    if(loginBtnEl) loginBtnEl.textContent = t('loginBtn');
+    const labels = document.querySelectorAll('#login-screen .field label');
+    if(labels[0]) labels[0].textContent = t('emailLabel');
+    if(labels[1]) labels[1].textContent = t('passwordLabel');
+    const pwInputEl = document.getElementById('password-input');
+    if(pwInputEl) pwInputEl.placeholder = t('pwPlaceholder');
+    const mainTitleEl = document.getElementById('main-header-title');
+    if(mainTitleEl) mainTitleEl.textContent = t('appTitle');
+    const addPatientBtnEl = document.getElementById('add-patient-btn');
+    if(addPatientBtnEl) addPatientBtnEl.textContent = t('addPatientBtn');
+    const searchInputEl = document.getElementById('search-input');
+    if(searchInputEl) searchInputEl.placeholder = t('searchPlaceholder');
+
+    const folderTitleEl = document.querySelector('#folder-view h2');
+    if(folderTitleEl) folderTitleEl.textContent = t('selectSection');
+
+    if(currentUser){
+      renderFolderView();
+      if(document.getElementById('patient-list').style.display !== 'none'){
+        renderPatientList();
+      }
+    }
+  }
+
+  function toggleLanguage(){
+    const next = currentLang === 'ar' ? 'en' : 'ar';
+    try{ window.localStorage.setItem(LANG_KEY, next); }catch(e){}
+    applyLanguage(next);
+  }
+
+  applyLanguage(currentLang);
+  document.getElementById('lang-toggle-login').addEventListener('click', toggleLanguage);
+  document.getElementById('lang-toggle-main').addEventListener('click', toggleLanguage);
 
   // ---------- State ----------
   const ALLOWED_EMAIL = 'esraarageh976@gmail.com';
@@ -626,11 +730,10 @@
         <div class="folder-icon">➕</div>
         <div>
           <div class="folder-name">إضافة قسم جديد</div>
-          <div class="folder-count">فتحتِ مكان جديد؟ ضيفيه هنا</div>
         </div>
       </div>
       <div id="add-branch-box" style="display:none; margin-top:6px; padding:14px; background:var(--sage-light); border-radius:14px;">
-        <div class="field"><label>اسم المكان الجديد</label><input type="text" id="new-branch-name" placeholder="مثلاً: عيادة الإسكندرية"></div>
+        <div class="field"><label>اسم القسم الجديد</label><input type="text" id="new-branch-name" placeholder="اسم القسم الجديد"></div>
         <div id="add-branch-error" style="color:var(--rose); font-size:12px; margin-bottom:8px;"></div>
         <div style="display:flex; gap:8px;">
           <button class="btn btn-primary" id="confirm-add-branch" style="flex:1; padding:8px;">إضافة</button>
@@ -655,7 +758,7 @@
       const errorEl = document.getElementById('add-branch-error');
       errorEl.textContent = '';
       const name = document.getElementById('new-branch-name').value.trim();
-      if(!name){ errorEl.textContent = 'اكتبي اسم المكان الأول.'; return; }
+      if(!name){ errorEl.textContent = 'اكتبي اسم القسم الأول.'; return; }
       const exists = getAllBranches().some(b => b.key.toLowerCase() === name.toLowerCase());
       if(exists){ errorEl.textContent = 'فيه قسم بنفس الاسم ده بالفعل.'; return; }
       const confirmBtn = document.getElementById('confirm-add-branch');
@@ -749,7 +852,7 @@
     reportScreen.style.display = 'flex';
     reportScreen.innerHTML = `
       <div class="screen-header">
-        <button class="icon-btn" id="back-from-report">→</button>
+        <button class="icon-btn" id="back-from-report" title="إغلاق والرجوع للأقسام" style="font-size:20px;">→</button>
         <h2>التقرير الشهري</h2>
       </div>
       <div class="screen-body">
