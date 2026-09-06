@@ -43,6 +43,16 @@
     color:var(--ink);
     font-family:'IBM Plex Sans Arabic', sans-serif;
     min-height:100vh;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  input, textarea, select {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
   }
   h1,h2,h3,.serif{
     font-family:'Markazi Text', serif;
@@ -258,6 +268,7 @@
       <input type="password" id="password-input" placeholder="اكتبي كلمة المرور" autocomplete="current-password">
     </div>
     <button class="btn btn-primary" id="login-btn">دخول</button>
+    <button class="toggle-mode" id="forgot-pw-btn">نسيت كلمة المرور؟</button>
     <div id="login-error"></div>
     <div id="login-info"></div>
   </div>
@@ -313,7 +324,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
   import {
-    getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    getAuth, signInWithEmailAndPassword,
     onAuthStateChanged, signOut, sendPasswordResetEmail
   } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
   import {
@@ -333,6 +344,18 @@
   const fbApp = initializeApp(firebaseConfig);
   const auth = getAuth(fbApp);
   const db = getFirestore(fbApp);
+  // ---------- Protection & Anti-Copy ----------
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    if (
+      e.keyCode === 123 ||
+      (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) ||
+      (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83))
+    ) {
+      e.preventDefault();
+      return false;
+    }
+  });
 
   // ---------- Utilities ----------
   function esc(s){ return (s||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -402,7 +425,6 @@
   document.getElementById('theme-toggle-main').addEventListener('click', toggleTheme);
 
   // ---------- State ----------
-  const ALLOWED_EMAIL = 'esraarageh976@gmail.com';
   let currentUser = null;
   let patients = [];
   let sessionsCache = {};
@@ -524,29 +546,15 @@
 
   async function performLogin(){
     loginError.textContent = '';
-    const email = emailInput.value.trim().toLowerCase();
+    const email = emailInput.value.trim();
     const pw = pwInput.value;
     if(!email || !pw){ loginError.textContent = 'اكتبي البريد وكلمة المرور.'; return; }
-    if(email !== ALLOWED_EMAIL){
-      loginError.textContent = friendlyAuthError('auth/invalid-credential');
-      return;
-    }
     setLoginBusy(true, 'جاري تسجيل الدخول...');
     try{
       await signInWithEmailAndPassword(auth, email, pw);
     }catch(e){
       console.error('Sign in error:', e);
-      // Auto-create account for allowed email on first time if user not found or invalid credential
-      if(e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential'){
-        try{
-          await createUserWithEmailAndPassword(auth, email, pw);
-        }catch(createErr){
-          console.error('Create user error:', createErr);
-          loginError.textContent = friendlyAuthError(createErr.code || e.code);
-        }
-      } else {
-        loginError.textContent = friendlyAuthError(e.code);
-      }
+      loginError.textContent = friendlyAuthError(e.code);
     }
     setLoginBusy(false);
   }
@@ -559,6 +567,21 @@
     if(e.key === 'Enter') performLogin();
   });
 
+  document.getElementById('forgot-pw-btn').addEventListener('click', async () => {
+    loginError.textContent = '';
+    const email = emailInput.value.trim();
+    if(!email){ loginError.textContent = 'اكتبي بريدك الإلكتروني الأول عشان نبعتلك رابط الاسترجاع.'; return; }
+    setLoginBusy(true, 'جاري إرسال رابط الاسترجاع...');
+    try{
+      await sendPasswordResetEmail(auth, email);
+      loginInfo.textContent = 'تم إرسال رابط استرجاع كلمة المرور على بريدك.';
+    }catch(e){
+      loginError.textContent = friendlyAuthError(e.code);
+      loginInfo.textContent = '';
+    }
+    loginBtn.disabled = false;
+  });
+
   applyLanguage(currentLang);
   const l1El = document.getElementById('lang-toggle-login');
   if(l1El) l1El.addEventListener('click', toggleLanguage);
@@ -566,11 +589,9 @@
   if(l2El) l2El.addEventListener('click', toggleLanguage);
 
   document.getElementById('lock-btn').addEventListener('click', async () => {
-    if(confirm('هل تريد تسجيل الخروج من هذا الحساب لدخول حساب جديد؟')){
+    if(confirm('هل تريد تسجيل الخروج؟')){
       try{
         await signOut(auth);
-        emailInput.value = '';
-        pwInput.value = '';
       }catch(err){
         console.error('Signout error:', err);
         alert('حصل خطأ في تسجيل الخروج، حاولي تاني.');
@@ -580,24 +601,9 @@
 
   onAuthStateChanged(auth, async (user) => {
     if(user){
-      const loggedEmail = (user.email || '').toLowerCase().trim();
-
-      // Enforce strict single user restriction
-      if(loggedEmail !== ALLOWED_EMAIL){
-        await signOut(auth);
-        currentUser = null;
-        mainApp.style.display = 'none';
-        loginScreen.style.display = 'flex';
-        emailInput.value = '';
-        pwInput.value = '';
-        loginError.textContent = friendlyAuthError('auth/invalid-credential');
-        loginInfo.textContent = '';
-        return;
-      }
-
       currentUser = user;
       const emailEl = document.getElementById('logged-in-user-email');
-      if(emailEl) emailEl.textContent = user.email || ALLOWED_EMAIL;
+      if(emailEl) emailEl.textContent = user.email || 'مستخدم مسجّل';
       loginScreen.style.display = 'none';
       mainApp.style.display = 'flex';
       patients = []; sessionsCache = {}; tasksCache = {};
@@ -609,7 +615,7 @@
       mainApp.style.display = 'none';
       loginScreen.style.display = 'flex';
       pwInput.value = '';
-      emailInput.value = ALLOWED_EMAIL;
+      emailInput.value = '';
       loginError.textContent = '';
       loginInfo.textContent = '';
     }
